@@ -58,7 +58,7 @@ char  szBuf[1024], *p;
        // key not found
        if (p - szBuf >= Rc ||  *p==0) 
        {
-           if (RegOpenKeyEx (HKEY_LOCAL_MACHINE,   // Key handle at root level.
+           if (RegOpenKeyEx (HKEY_CURRENT_USER,   // Key handle at root level.
                              szRegPath,              // Path name of child key.
                               0,                 // Reserved.
                               KEY_READ,                // Requesting read access.
@@ -128,7 +128,7 @@ HANDLE hINIFile;
    else     // do not use INI File, use Registry
    {
 //MessageBox (NULL, szKey, "Tftpd32", MB_OK);
-       if (RegCreateKeyEx (HKEY_LOCAL_MACHINE,
+       if (RegCreateKeyEx (HKEY_CURRENT_USER,
                             szRegPath,
                             0,
                             NULL,

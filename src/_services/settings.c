@@ -201,8 +201,8 @@ BOOL Tftpd32DestroySettings (void)
 int   Rc;
 FILE *f;
     // destroy keys
-    RegDeleteKey (HKEY_LOCAL_MACHINE, TFTPD32_DHCP_KEY);
-    Rc = RegDeleteKey (HKEY_LOCAL_MACHINE, TFTPD32_MAIN_KEY);
+    RegDeleteKey (HKEY_CURRENT_USER, TFTPD32_DHCP_KEY);
+    Rc = RegDeleteKey (HKEY_CURRENT_USER, TFTPD32_MAIN_KEY);
         
         // delete ini file
 /*    if (szTftpd32IniFile[0]!=0)
