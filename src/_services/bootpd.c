@@ -407,7 +407,7 @@ return pCurIP;
 //////////////////////////////////////////////////////////////////////////////////////////////
 // fill DHCP fields
 //////////////////////////////////////////////////////////////////////////////////////////////
-int DHCPOptionsReply(struct dhcp_packet* pDhcpPkt, int nDhcpType, struct sockaddr_in* receivingAddress, unsigned short iLastArch)
+int DHCPOptionsReply(struct dhcp_packet* pDhcpPkt, int nDhcpType, struct sockaddr_in* receivingAddress, unsigned short iLastArch, BOOL is_bootp)
 {
 unsigned char  *pOpt = (unsigned char *) (pDhcpPkt->options + (sizeof DHCP_OPTIONS_COOKIE - 1));
 HANDLE            hFile;
@@ -471,6 +471,14 @@ static struct S_DhcpOptions sDhcpOpt [] =       // 0 for unspecified
    if (sSettings.uServices & TFTPD32_TFTP_SERVER) 
       pDhcpPkt->siaddr = *pNearest;   // Next server (TFTP server is enabled)
    pDhcpPkt->siaddr = *pNearest;   // always fill siaddr
+
+   if (is_bootp)
+   {
+	   *pOpt++ = DHO_END;
+	   msgSize = (int)(pOpt - (unsigned char*)pDhcpPkt);
+	   return msgSize;
+   }
+
    for (Ark=0 ; Ark<SizeOfTab(sDhcpOpt) ; Ark++)
    {
 	 // skip if linked to a service which is not started (change suggested by Colin)
@@ -648,7 +656,7 @@ struct LL_IP  *pCurIP=NULL, *pProposedIP=NULL;	// Thanks Sam Leitch !
 int            Ark, nDhcpType = 0;
 struct in_addr in_RequestedAddr;
 DWORD sStaticIP;
-unsigned short iLastArch;	// architecture required by client
+unsigned short iLastArch = 0;	// architecture required by client
 
     if (IsDHCP (*pDhcpPkt))
     {
@@ -677,9 +685,11 @@ unsigned short iLastArch;	// architecture required by client
 
     // if (sParamDHCP.nPoolSize==0) return FALSE;   // no allocation pool --> listen only
 
+	 BOOL is_bootp = FALSE;
      switch (nDhcpType)
      {
         case 0           :    // BootP
+			is_bootp = TRUE;
             if(sParamDHCP.nIgnoreBootp)
             {
                LOG (5, "Ignoring Bootp request");
@@ -724,7 +734,8 @@ unsigned short iLastArch;	// architecture required by client
             pDhcpPkt->op = BOOTREPLY;
             // translate $IP$ and $MAC$ from boot file name
             TranslateExp (sParamDHCP.szBootFile, pDhcpPkt->file, pDhcpPkt->yiaddr, pDhcpPkt->chaddr, iLastArch);
-           *pSize = DHCPOptionsReply (pDhcpPkt, DHCPOFFER, receivingAddress, iLastArch);
+
+            *pSize = DHCPOptionsReply (pDhcpPkt, DHCPOFFER, receivingAddress, iLastArch, is_bootp);
             break ;
 
 		//NJW Changed how requests are handled to mimic linux -- requests are responded to even if we didn't originally allocate, but only if the requested address is in our pool range
@@ -741,7 +752,7 @@ unsigned short iLastArch;	// architecture required by client
                    pDhcpPkt->yiaddr.s_addr = sStaticIP;
                  // translate $IP$ and $MAC$ from boot file name
                  TranslateExp (sParamDHCP.szBootFile, pDhcpPkt->file, pDhcpPkt->yiaddr, pDhcpPkt->chaddr, iLastArch);
-                   *pSize = DHCPOptionsReply (pDhcpPkt, DHCPACK, receivingAddress, iLastArch);
+                   *pSize = DHCPOptionsReply (pDhcpPkt, DHCPACK, receivingAddress, iLastArch, FALSE);
 				   break;
 			}
 
@@ -791,7 +802,7 @@ unsigned short iLastArch;	// architecture required by client
 				pDhcpPkt->op = BOOTREPLY;
 				pDhcpPkt->yiaddr.s_addr = pProposedIP->dwIP.s_addr;
 				TranslateExp (sParamDHCP.szBootFile, pDhcpPkt->file, pDhcpPkt->yiaddr, pDhcpPkt->chaddr, iLastArch);
-				*pSize = DHCPOptionsReply (pDhcpPkt, DHCPACK, receivingAddress, iLastArch);
+				*pSize = DHCPOptionsReply (pDhcpPkt, DHCPACK, receivingAddress, iLastArch, FALSE);
 			}
 			else
 			{
